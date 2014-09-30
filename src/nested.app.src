@@ -1,0 +1,12 @@
+{application, nested,
+ [
+  {description, "set and get values from nested maps"},
+  {vsn, "0.1.0"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { nested, []}},
+  {env, []}
+ ]}.

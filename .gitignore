@@ -1,0 +1,6 @@
+.rebar
+.eunit
+deps
+ebin
+src/tags
+tags
