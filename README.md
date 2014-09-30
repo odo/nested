@@ -1,6 +1,9 @@
 # nested
 a library to handle nested Erlang maps
 
+## requirements
+Erlang/OTP 17.3 or newer
+
 ## building
 
 ```
@@ -13,12 +16,23 @@ erl -pz ebin
 ## usage
 
 ### get
+
 get the value of an existing key:
+
 ```erlang
 1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
 #{two => #{one => target,one_side => 1},two_side => 2}
 2> nested:get([two, one], Map).
 target
+```
+or use a default in case the key does not exist:
+
+
+```erlang
+1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
+#{two => #{one => target,one_side => 1},two_side => 2}
+2> nested:get([two, some_unknown_key], Map, default).
+default
 ```
 
 ### put
@@ -65,7 +79,7 @@ If you really mean to set the value to a fun you have to wrap it in an update fu
   two_side => #Fun<erl_eval.12.106461118>}
 ```
 
-### getf/1, updatef/1, putf/1
+### getf/1, getf/2, updatef/1, putf/1
 
 you can use this variants to get a function with the path in the context:
 
