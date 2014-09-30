@@ -19,15 +19,17 @@ getf([], Value) ->
     Value.
 
 
-update(Path, Value, Map) ->
+update(Path, ValueOrFun, Map) ->
     SetFun = updatef(Path),
-    SetFun(Value, Map).
+    SetFun(ValueOrFun, Map).
 
 updatef(Path) ->
-    fun(Value, Map) -> updatef(Path, Value, Map) end.
+    fun(ValueOrFun, Map) -> updatef(Path, ValueOrFun, Map) end.
 
-updatef([Key|PathRest], Value, Map) ->
-    maps:update(Key, updatef(PathRest, Value, maps:get(Key, Map)), Map);
+updatef([Key|PathRest], ValueOrFun, Map) ->
+    maps:update(Key, updatef(PathRest, ValueOrFun, maps:get(Key, Map)), Map);
+updatef([], Fun, OldValue) when is_function(Fun) ->
+    Fun(OldValue);
 updatef([], Value, _) ->
     Value.
 
@@ -68,7 +70,14 @@ get_fails_test() ->
 update_test() ->
     ?assertEqual(3, update([], 3, test_map())),
     ?assertEqual(#{three => 3, three_side => 3}, update([three], 3, test_map())),
-    ?assertEqual(#{three => #{two => 2, two_side => 2}, three_side => 3}, update([three, two], 2, test_map())).
+    ?assertEqual(
+       #{three => #{two => 2, two_side => 2}, three_side => 3},
+       update([three, two], 2, test_map())
+    ),
+    ?assertEqual(
+       #{three => #{two => #{one => target, one_side => 11}, two_side => 2}, three_side => 3},
+       update([three, two, one_side], fun(E) -> E + 10 end, test_map())
+    ).
 
 update_fails_test() ->
     ?assertException(error, bad_key, update([unknown], 1, test_map())),
