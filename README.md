@@ -1,4 +1,9 @@
+
+![Code Climate](http://img.shields.io/badge/code_climate-17.3-brightgreen.svg?style=flat-square)
 # nested
+
+{<sub>{<sub>{<sub>{<sub>{}</sub>}</sub>}{<sub>{<sub>{}</sub>}</sub>}</sub>}</sub>}
+
 a library to handle nested Erlang maps
 
 ## requirements
