@@ -83,8 +83,27 @@ If you really mean to set the value to a fun you have to wrap it in an update fu
 #{two => #{one => target,one_side => 1},
   two_side => #Fun<erl_eval.12.106461118>}
 ```
+### remove
 
-### getf/1, getf/2, updatef/1, putf/1
+delete a key:
+
+```erlang
+1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
+#{two => #{one => target,one_side => 1},two_side => 2}
+2>  nested:remove([two, one_side], Map).
+#{two => #{one => target},two_side => 2}
+```
+
+if the path does not exist, nothing changes:
+
+```erlang
+1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
+#{two => #{one => target,one_side => 1},two_side => 2}
+2> nested:remove([two, unknow, path], Map).
+#{two => #{one => target,one_side => 1},two_side => 2}
+```
+
+### getf/1, getf/2, updatef/1, putf/1, removef/1
 
 you can use this variants to get a function with the path in the context:
 

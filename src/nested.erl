@@ -4,7 +4,8 @@
     put/3, putf/1,
     get/2, getf/1,
     get/3, getf/2,
-    update/3, updatef/1
+    update/3, updatef/1,
+    remove/2, removef/1
 ]).
 
 get(Path, Map) ->
@@ -63,6 +64,24 @@ putf_internal([Key|PathRest], Value, Map) ->
 putf_internal([], Value, _) ->
     Value.
 
+remove(Path, Map) ->
+    RemoveFun = removef(Path),
+    RemoveFun(Map).
+
+removef(Path) ->
+    fun(Map) -> removef_internal(Path, Map) end.
+
+removef_internal([], _) ->
+    throw({bad_path, []});
+removef_internal([LastKey], Map) ->
+    maps:remove(LastKey, Map);
+removef_internal([Key|PathRest], Map) ->
+    case maps:is_key(Key, Map) of
+        true ->
+            maps:put(Key, removef_internal(PathRest, maps:get(Key, Map)), Map);
+        false ->
+            Map
+    end.
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -123,6 +142,28 @@ put_test() ->
         #{three => #{two => #{one => #{minus_one => -1}, one_side => 1}, two_side => 2}, three_side => 3},
         put([three, two, one, minus_one], -1, test_map())
     ).
+
+remove_test() ->
+    ?assertEqual(
+        #{three => #{two_side => 2}, three_side => 3},
+        remove([three, two], test_map())
+    ),
+    ?assertEqual(
+        #{three => #{two => #{one_side => 1}, two_side => 2}, three_side => 3},
+        remove([three, two, one], test_map())
+    ),
+    ?assertEqual(
+       test_map(),
+        remove([unknown, path], test_map())
+    ),
+    ?assertEqual(
+       test_map(),
+        remove([three, unknown_key], test_map())
+    ).
+
+remove_fail_test() ->
+    ?assertException(throw, {bad_path, []}, remove([], test_map())).
+
 
 test_map() ->
     L1 = #{one   => target, one_side => 1},
