@@ -103,7 +103,17 @@ if the path does not exist, nothing changes:
 #{two => #{one => target,one_side => 1},two_side => 2}
 ```
 
-### getf/1, getf/2, updatef/1, putf/1, removef/1
+### keys
+list the keys in a sup map:
+
+```erlang
+1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
+#{two => #{one => target,one_side => 1},two_side => 2}
+2>  nested:keys([two], Map).
+[one,one_side]
+```
+
+### getf/1, getf/2, updatef/1, putf/1, removef/1, keysf/1
 
 you can use this variants to get a function with the path in the context:
 

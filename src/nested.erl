@@ -5,7 +5,8 @@
     get/2, getf/1,
     get/3, getf/2,
     update/3, updatef/1,
-    remove/2, removef/1
+    remove/2, removef/1,
+    keys/2, keysf/1
 ]).
 
 get(Path, Map) ->
@@ -82,6 +83,19 @@ removef_internal([Key|PathRest], Map) ->
         false ->
             Map
     end.
+
+keys(Path, Map) ->
+    KeysFun = keysf(Path),
+    KeysFun(Map).
+
+keysf(Path) ->
+    fun(Map) -> keysf_internal(Path, Map) end.
+
+keysf_internal([Key|PathRest], Map) ->
+    keysf_internal(PathRest, maps:get(Key, Map));
+keysf_internal([], Map) ->
+    maps:keys(Map).
+
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -163,6 +177,16 @@ remove_test() ->
 
 remove_fail_test() ->
     ?assertException(throw, {bad_path, []}, remove([], test_map())).
+
+keys_test() ->
+    ?assertEqual(
+       [three, three_side],
+        keys([], test_map())
+    ),
+    ?assertEqual(
+       [one, one_side],
+        keys([three, two], test_map())
+    ).
 
 
 test_map() ->
