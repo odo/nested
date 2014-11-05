@@ -38,14 +38,24 @@ update(Path, ValueOrFun, Map) ->
     SetFun(ValueOrFun, Map).
 
 updatef(Path) ->
-    fun(ValueOrFun, Map) -> updatef_internal(Path, ValueOrFun, Map) end.
+    fun(ValueOrFun, Map) ->
+        try updatef_internal(Path, ValueOrFun, Map)
+        catch
+            error:{error, {no_map, PathRest, Element}} ->
+                PathLength  = length(Path) - length(PathRest),
+                PathToThrow = lists:sublist(Path, PathLength),
+                erlang:error({no_map, PathToThrow, Element})
+        end
+    end.
 
-updatef_internal([Key|PathRest], ValueOrFun, Map) ->
+updatef_internal([Key|PathRest], ValueOrFun, Map) when is_map(Map) ->
     maps:update(Key, updatef_internal(PathRest, ValueOrFun, maps:get(Key, Map)), Map);
 updatef_internal([], Fun, OldValue) when is_function(Fun) ->
     Fun(OldValue);
 updatef_internal([], Value, _) ->
-    Value.
+    Value;
+updatef_internal(Path, _, Element) ->
+    erlang:error({error, {no_map, Path, Element}}).
 
 
 put(Path, Value, Map) ->
@@ -138,7 +148,8 @@ update_test() ->
 
 update_fails_test() ->
     ?assertException(error, bad_key, update([unknown], 1, test_map())),
-    ?assertException(error, bad_key, update([three, unknown], 1, test_map())).
+    ?assertException(error, bad_key, update([three, unknown], 1, test_map())),
+    ?assertException(error, {no_map, [foo,bar], []}, update([foo, bar, buz], 1, #{foo => #{bar => []}})).
 
 put_test() ->
     ?assertEqual(3, put([], 3, test_map())),
