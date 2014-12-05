@@ -6,7 +6,8 @@
     get/3, getf/2,
     update/3, updatef/1,
     remove/2, removef/1,
-    keys/2, keysf/1
+    keys/2, keysf/1,
+    append/3
 ]).
 
 get(Path, Map) ->
@@ -106,6 +107,14 @@ keysf_internal([Key|PathRest], Map) ->
 keysf_internal([], Map) ->
     maps:keys(Map).
 
+append(Path, Value, Map) ->
+    AppendFun =
+        fun(List) when is_list(List) ->
+                List ++ [Value];
+           (_) ->
+                error(no_list)
+        end,
+    update(Path, AppendFun, Map).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -199,6 +208,19 @@ keys_test() ->
         keys([three, two], test_map())
     ).
 
+append_test() ->
+    TestMap = #{outer => #{list => [1], hash => #{}}},
+    ?assertEqual(
+         #{outer => #{list => [1, 2], hash => #{}}},
+        append([outer, list], 2, TestMap)
+    ).
+
+append_fail_test() ->
+    TestMap = #{outer => #{list => [1], hash => #{}}},
+    ?assertException(
+        error, no_list,
+        append([outer, hash], 2, TestMap)
+    ).
 
 test_map() ->
     L1 = #{one   => target, one_side => 1},
