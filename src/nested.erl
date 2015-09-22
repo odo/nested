@@ -145,9 +145,9 @@ get_test() ->
     ?assertEqual(target, get([three, two, one], test_map())).
 
 get_fails_test() ->
-    ?assertException(error, bad_key, get([unknown], test_map())),
-    ?assertException(error, bad_key, get([three, unknown], test_map())),
-    ?assertException(error, badarg,  get([three, two, one, unknown], test_map())).
+    ?assertException(error, {badkey,unknown}, get([unknown], test_map())),
+    ?assertException(error, {badkey,unknown}, get([three, unknown], test_map())),
+    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map())).
 
 get_with_default_test() ->
     ?assertEqual(test_map(), get([], test_map(), default)),
@@ -159,7 +159,7 @@ get_with_default_test() ->
     ?assertEqual(default, get([three, unknown], test_map(), default)).
 
 get_with_default_fails_test() ->
-    ?assertException(error, badarg,  get([three, two, one, unknown], test_map(), default)).
+    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map(), default)).
 
 update_test() ->
     ?assertEqual(3, update([], 3, test_map())),
@@ -174,8 +174,8 @@ update_test() ->
     ).
 
 update_fails_test() ->
-    ?assertException(error, bad_key, update([unknown], 1, test_map())),
-    ?assertException(error, bad_key, update([three, unknown], 1, test_map())),
+    ?assertException(error, {badkey, unknown}, update([unknown], 1, test_map())),
+    ?assertException(error, {badkey, unknown}, update([three, unknown], 1, test_map())),
     ?assertException(error, {no_map, [foo,bar], []}, update([foo, bar, buz], 1, #{foo => #{bar => []}})).
 
 put_test() ->
