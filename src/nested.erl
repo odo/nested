@@ -1,6 +1,7 @@
 -module (nested).
 
 -export([
+    is_key/2,
     put/3, putf/1,
     get/2, getf/1,
     get/3, getf/2,
@@ -9,6 +10,16 @@
     keys/2, keysf/1,
     append/3
 ]).
+
+is_key([Key], Map) ->
+    maps:is_key(Key, Map);
+
+is_key([Key|PathRest], Map) ->
+    case Map of
+        #{Key := SubMap} -> is_key(PathRest, SubMap);
+        _                -> false
+    end.
+
 
 get(Path, Map) ->
     GetFun = getf(Path),
@@ -118,6 +129,13 @@ append(Path, Value, Map) ->
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
+
+
+is_key_test() ->
+    ?assertEqual(false, is_key([fnord, foo, bar], #{})),
+    ?assertEqual(true,  is_key([fnord], #{fnord => 23})),
+    ?assertEqual(true,  is_key([three, two, one], test_map())),
+    ?assertEqual(false, is_key([three, two, seven], test_map())).
 
 get_test() ->
     ?assertEqual(test_map(), get([], test_map())),
