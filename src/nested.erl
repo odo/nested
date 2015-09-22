@@ -1,6 +1,7 @@
 -module (nested).
 
 -export([
+    is_key/2,
     put/3, putf/1,
     get/2, getf/1,
     get/3, getf/2,
@@ -9,6 +10,16 @@
     keys/2, keysf/1,
     append/3
 ]).
+
+is_key([Key], Map) ->
+    maps:is_key(Key, Map);
+
+is_key([Key|PathRest], Map) ->
+    case Map of
+        #{Key := SubMap} -> is_key(PathRest, SubMap);
+        _                -> false
+    end.
+
 
 get(Path, Map) ->
     GetFun = getf(Path),
@@ -119,6 +130,13 @@ append(Path, Value, Map) ->
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
+
+is_key_test() ->
+    ?assertEqual(false, is_key([fnord, foo, bar], #{})),
+    ?assertEqual(true,  is_key([fnord], #{fnord => 23})),
+    ?assertEqual(true,  is_key([three, two, one], test_map())),
+    ?assertEqual(false, is_key([three, two, seven], test_map())).
+
 get_test() ->
     ?assertEqual(test_map(), get([], test_map())),
     ?assertEqual(3, get([three_side], test_map())),
@@ -127,9 +145,9 @@ get_test() ->
     ?assertEqual(target, get([three, two, one], test_map())).
 
 get_fails_test() ->
-    ?assertException(error, bad_key, get([unknown], test_map())),
-    ?assertException(error, bad_key, get([three, unknown], test_map())),
-    ?assertException(error, badarg,  get([three, two, one, unknown], test_map())).
+    ?assertException(error, {badkey,unknown}, get([unknown], test_map())),
+    ?assertException(error, {badkey,unknown}, get([three, unknown], test_map())),
+    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map())).
 
 get_with_default_test() ->
     ?assertEqual(test_map(), get([], test_map(), default)),
@@ -141,7 +159,7 @@ get_with_default_test() ->
     ?assertEqual(default, get([three, unknown], test_map(), default)).
 
 get_with_default_fails_test() ->
-    ?assertException(error, badarg,  get([three, two, one, unknown], test_map(), default)).
+    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map(), default)).
 
 update_test() ->
     ?assertEqual(3, update([], 3, test_map())),
@@ -156,8 +174,8 @@ update_test() ->
     ).
 
 update_fails_test() ->
-    ?assertException(error, bad_key, update([unknown], 1, test_map())),
-    ?assertException(error, bad_key, update([three, unknown], 1, test_map())),
+    ?assertException(error, {badkey, unknown}, update([unknown], 1, test_map())),
+    ?assertException(error, {badkey, unknown}, update([three, unknown], 1, test_map())),
     ?assertException(error, {no_map, [foo,bar], []}, update([foo, bar, buz], 1, #{foo => #{bar => []}})).
 
 put_test() ->
