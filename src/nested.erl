@@ -28,7 +28,12 @@ get([], Value) ->
     Value.
 
 get([Key|PathRest], Map, Default) ->
-    get(PathRest, maps:get(Key, Map, Default), Default);
+    case maps:get(Key, Map, {?MODULE, Default}) of
+        {?MODULE, Default} ->
+            Default;
+        NestedMap ->
+            get(PathRest, NestedMap, Default)
+    end;
 
 get([], Value, _) ->
     Value.
