@@ -7,5 +7,6 @@
                   kernel,
                   stdlib
                  ]},
-  {env, []}
+  {env, []},
+  {licenses, ["MIT"]}
  ]}.
