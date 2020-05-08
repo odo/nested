@@ -1,7 +1,7 @@
 {application, nested,
  [
   {description, "set and get values from nested maps"},
-  {vsn, "0.1.2"},
+  {vsn, "0.2.0"},
   {registered, []},
   {applications, [
                   kernel,
