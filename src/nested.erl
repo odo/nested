@@ -194,20 +194,30 @@ update_with_test() ->
 %% @end
 %%--------------------------------------------------------------------
 -spec remove(path(), map()) -> map().
-remove(   [K], Map) when is_map(Map) -> maps:remove(K, Map);
-remove([K|Kx], Map) when is_map(Map) -> Map#{K:=remove(Kx, maps:get(K, Map))};
+remove([K|Kx], Map) when is_map(Map) -> 
+    try do_remove([K|Kx], Map) of 
+          NewMap           -> NewMap
+    catch not_found        -> Map;
+          error:{badkey,_} -> Map
+    end;
 remove(    [], Map) when is_map(Map) -> #{};
 remove(   _, NoMap)                  -> error({badmap, NoMap}).
 
+do_remove(   [K], Map) -> maps:remove(K, Map);
+do_remove([K|Kx], Map) -> Map#{K:=remove(Kx, maps:get(K, Map))};
+do_remove(    _, _Any) -> throw(not_found).
+
 remove_test() ->
     % Tests conditions when path matches a value in map
-    ?assertEqual(       #{}, remove(       [],    #{a=>1})),
-    ?assertEqual(       #{}, remove(      [a],    #{a=>1})),
+    ?assertEqual(#{}, remove( [], #{a=>1})),
+    ?assertEqual(#{}, remove([a], #{a=>1})),
     ?assertNotMatch(#{m0:=_        }, remove(     [m0], test_map())),
     ?assertNotMatch(#{m0:=#{ m1:=_}}, remove([m0,  m1], test_map())), 
+    ?assertNotMatch(#{m0:=#{ v1:=_}}, remove([m0,  v1], test_map())), 
     % Tests conditions when path does not match a value in map 
-    ?assertEqual(test_map(), remove([    '?'], test_map())),
-    ?assertEqual(test_map(), remove([m0, '?'], test_map())),
+    ?assertEqual(test_map(), remove([     '?'], test_map())),
+    ?assertEqual(test_map(), remove([ m0, '?'], test_map())),
+    ?assertEqual(test_map(), remove(['?', '?'], test_map())),
     % Tests conditions when the map input is not a map
     ?assertException(error, {badmap,x}, remove([], x)).
 
