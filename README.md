@@ -54,8 +54,7 @@ If there are more keys than in the original map, nested maps are created:
 
 ```erlang
 3> nested:put([two, down, the, rabbit, hole], 42, Map).
-#{two => #{down => #{the => #{rabbit => #{hole => 42}}},one => target,one_side => 1},
-  two_side => 2}
+#{two => #{down => #{the => #{rabbit => #{hole => 42}}},one => target,one_side => 1}, two_side => 2}
 ```
 
 ### update
@@ -69,20 +68,13 @@ replace an exiting value:
 #{two => #{one => target,one_side => 7},two_side => 2}
 ```
 
-instead of a value, you can pass a function with arity 1 which is passed the old value:
+instead of a value, you can use update_with a function with arity 2 which is passed the path and the old value:
 
 ```erlang
-3> nested:update([two_side], fun(E) -> E*2 end, Map).
+3> nested:update([two_side], fun(_Path, E) -> E*2 end, Map).
 #{two => #{one => target,one_side => 1},two_side => 4}
 ```
 
-If you really mean to set the value to a fun you have to wrap it in an update fun:
-
-```erlang
-4> nested:update([two_side], fun(_) -> fun(A, B) -> {A, B} end end, Map).
-#{two => #{one => target,one_side => 1},
-  two_side => #Fun<erl_eval.12.106461118>}
-```
 ### remove
 
 delete a key:
@@ -111,23 +103,6 @@ list the keys in a sup map:
 #{two => #{one => target,one_side => 1},two_side => 2}
 2>  nested:keys([two], Map).
 [one,one_side]
-```
-
-### getf/1, getf/2, updatef/1, putf/1, removef/1, keysf/1
-
-you can use this variants to get a function with the path in the context:
-
-```erlang
-1> Map = #{two => #{one => target, one_side => 1}, two_side => 2}.
-#{two => #{one => target,one_side => 1},two_side => 2}
-2> TwoOneSelector = nested:getf([two, one]).
-#Fun<nested.0.8958893>
-3> TwoOneSelector(Map).
-target
-4> TwoOneUpdater = nested:updatef([two, one]).
-#Fun<nested.1.8958893>
-5> TwoOneUpdater(new_value, Map).
-#{two => #{one => new_value,one_side => 1},two_side => 2}
 ```
 
 ## tests
