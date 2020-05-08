@@ -5,15 +5,17 @@
 -module (nested).
 -include_lib("eunit/include/eunit.hrl").
 
--export([is_key/2,
+-export([is_key/2, get/2, get/3,
     put/3,
-    get/2,
-    get/3,
     update/3,
     remove/2,
     keys/2,
     append/3
 ]).
+-export_type([key/0, path/0]).
+
+-type key()  :: term().
+-type path() :: [key()].
 
 
 %%%===================================================================
@@ -24,40 +26,80 @@
 %% @doc Returns true if the keys path exists, otherwise false.
 %% @end
 %%--------------------------------------------------------------------
--spec is_key([Keys :: atom()], map()) -> boolean().
-is_key([Key], Map) ->
-    maps:is_key(Key, Map);
-
-is_key([Key|PathRest], Map) ->
+-spec is_key(path(), map()) -> boolean().
+is_key(   [K], Map) when is_map_key(K,Map) -> true;
+is_key([K|Kx], Map) when is_map(Map)       -> 
     case Map of
-        #{Key := SubMap} -> is_key(PathRest, SubMap);
-        _                -> false
-    end.
+        #{K := SubMap} -> is_key(Kx, SubMap);
+        _              -> false
+    end;
+is_key(    [], Map) when is_map(Map)       -> true;
+is_key(   _, NoMap)                        -> error({badmap, NoMap}).
 
 is_key_test() ->
-    ?assertEqual(false, is_key([fnord, foo, bar], #{})),
-    ?assertEqual(true,  is_key([fnord], #{fnord => 23})),
-    ?assertEqual(true,  is_key([three, two, one], test_map())),
-    ?assertEqual(false, is_key([three, two, seven], test_map())).
+    % Tests conditions when path matches a value in map
+    ?assertEqual( true, is_key(           [],            #{})),
+    ?assertEqual( true, is_key(      [fnord], #{fnord => 23})),
+    ?assertEqual( true, is_key([m0, m1,  m2],     test_map())),
+    % Tests conditions when path does not match a value in map
+    ?assertEqual(false, is_key(     [m0, v1],            #{})),
+    ?assertEqual(false, is_key([m0, m1, '?'],     test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, get([], x)).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the value at the keys path, if path is not found 
+%% raises and exception. 
+%% @end
+%%--------------------------------------------------------------------
+-spec get(path(), map()) -> term().
+get(   [K], Map) when is_map(Map) ->         maps:get(K, Map) ;
+get([K|Kx], Map) when is_map(Map) -> get(Kx, maps:get(K, Map));
+get(    [], Map) when is_map(Map) ->                     Map  ;
+get(   _, NoMap)                  -> error({badmap, NoMap}).
+
+get_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(#{}, get(          [],        #{})),
+    ?assertEqual(  1, get(         [a],    #{a=>1})),
+    ?assertEqual( v0, get(        [v0], test_map())),
+    ?assertEqual( v1, get(    [m0, v1], test_map())),
+    ?assertEqual( v2, get([m0, m1, v2], test_map())),
+    % Tests conditions when path does not match a value in map 
+    ?assertException(error, {badkey,'?'}, get([    '?'], test_map())),
+    ?assertException(error, {badkey,'?'}, get([m0, '?'], test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, get([], x)).
+
+%%--------------------------------------------------------------------
+%% @doc Returns the value at the keys path, if path is not found 
+%% raises returns the specified default value. 
+%% @end
+%%--------------------------------------------------------------------
+-spec get(path(), map(), Default :: term()) -> term().
+get(Path, Map, Default) -> 
+    try get(Path, Map) of 
+          Result           -> Result
+    catch error:{badkey,_} -> Default
+    end.
+
+get_with_default_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(#{}, get(          [],        #{}, default)),
+    ?assertEqual(  1, get(         [a],    #{a=>1}, default)),
+    ?assertEqual( v0, get(        [v0], test_map(), default)),
+    ?assertEqual( v1, get(    [m0, v1], test_map(), default)),
+    ?assertEqual( v2, get([m0, m1, v2], test_map(), default)),
+    % Tests conditions when path does not match a value in map 
+    ?assertEqual(default, get([    '?'], test_map(), default)),
+    ?assertEqual(default, get([m0, '?'], test_map(), default)),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, get([], x)).
 
 
 
-get([Key|PathRest], Map) ->
-    get(PathRest, maps:get(Key, Map));
 
-get([], Value) ->
-    Value.
 
-get([Key|PathRest], Map, Default) ->
-    case maps:get(Key, Map, {?MODULE, Default}) of
-        {?MODULE, Default} ->
-            Default;
-        NestedMap ->
-            get(PathRest, NestedMap, Default)
-    end;
-
-get([], Value, _) ->
-    Value.
 
 update(Path, ValueOrFun, Map) ->
     try updatef_internal(Path, ValueOrFun, Map)
@@ -133,29 +175,7 @@ append(Path, Value, Map) ->
 % --------------------------------------------------------------------
 % ACTUAL TESTS -------------------------------------------------------
 
-get_test() ->
-    ?assertEqual(test_map(), get([], test_map())),
-    ?assertEqual(3, get([three_side], test_map())),
-    ?assertEqual(2, get([three, two_side], test_map())),
-    ?assertEqual( #{one => target, one_side => 1}, get([three, two], test_map())),
-    ?assertEqual(target, get([three, two, one], test_map())).
 
-get_fails_test() ->
-    ?assertException(error, {badkey,unknown}, get([unknown], test_map())),
-    ?assertException(error, {badkey,unknown}, get([three, unknown], test_map())),
-    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map())).
-
-get_with_default_test() ->
-    ?assertEqual(test_map(), get([], test_map(), default)),
-    ?assertEqual(3, get([three_side], test_map(), default)),
-    ?assertEqual(2, get([three, two_side], test_map(), default)),
-    ?assertEqual( #{one => target, one_side => 1}, get([three, two], test_map(), default)),
-    ?assertEqual(target, get([three, two, one], test_map(), default)),
-    ?assertEqual(default, get([unknown], test_map(), default)),
-    ?assertEqual(default, get([three, unknown], test_map(), default)).
-
-get_with_default_fails_test() ->
-    ?assertException(error, {badmap,target},  get([three, two, one, unknown], test_map(), default)).
 
 update_test() ->
     ?assertEqual(3, update([], 3, test_map())),
@@ -243,7 +263,7 @@ append_fail_test() ->
 
 % Creates a simple nested map for testing ---------------------------
 test_map() ->
-    L1 = #{one   => target, one_side => 1},
-    L2 = #{two   => L1,     two_side => 2},
-         #{three => L2,     three_side => 3}.
+    M2 = #{m2 => #{}, v2 => v2},
+    M1 = #{m1 =>  M2, v1 => v1},
+   _M0 = #{m0 =>  M1, v0 => v0}.
 
