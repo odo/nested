@@ -4,3 +4,6 @@ deps
 ebin
 src/tags
 tags
+_build
+rebar.lock
+rebar
