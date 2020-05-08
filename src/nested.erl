@@ -7,7 +7,7 @@
 
 -export([is_key/2, get/2, get/3,
     put/3,
-    update/3,
+    update/3, update_with/3,
     remove/2,
     keys/2,
     append/3
@@ -96,28 +96,76 @@ get_with_default_test() ->
     % Tests conditions when the map input is not a map
     ?assertException(error, {badmap,x}, get([], x)).
 
+%%--------------------------------------------------------------------
+%% @doc If the key path exists in Map1, the old associated value is 
+%% replaced by value Value. The function returns a new map Map2 
+%% containing the new associated value.
+%% The call fails with a {badmap,Map} exception if Map1 is not a map, 
+%% or with a {badkey,Key} exception if no value is associated with 
+%% Key.
+%% @end
+%%--------------------------------------------------------------------
+-spec update(path(), term(), map()) -> map().
+update(   [K], V, M) -> maps:update(K,            V,                  M);
+update([K|Kx], V, M) -> maps:update(K, update(Kx, V, maps:get(K, M)), M);
+update(    [], V, M) when is_map(M) -> V;
+update( _, _, NoMap)                -> error({badmap, NoMap}).
+
+update_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(             0 , update(      [], 0,    #{a=>1})),
+    ?assertEqual(#{ a=>       2}, update(     [a], 2,    #{a=>1})),
+    ?assertMatch(#{m0:=0       }, update(    [m0], 0, test_map())),
+    ?assertMatch(#{m0:=#{m1:=0}}, update([m0, m1], 0, test_map())),
+    % Tests conditions when path does not match a value in map 
+    ?assertException(error, {badkey,'?'}, 
+                     update([    '?'], 0, test_map())),
+    ?assertException(error, {badkey,'?'}, 
+                     update([m0, '?'], 0, test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, update([], 0, x)).
+
+%%--------------------------------------------------------------------
+%% @doc Update a value in a Map1 associated with a key path by calling 
+%% Fun on the old value to get a new value. An exception {badkey,Key} 
+%% is generated a Key is not present during the path.
+%% The function should be of arity 2 where the 1st input is the key 
+%% path and the 2nd the actual value.
+%% @end
+%%--------------------------------------------------------------------
+-spec update_with(path(), function(), map()) -> map().
+update_with([K|Kx], F, M) when is_map(M) -> 
+    update_with([K|Kx], F, M, [K|Kx]);
+update_with([], F,     M) when is_map(M) -> F([], M);
+update_with( _, _, NoMap)                -> error({badmap, NoMap}).
+
+update_with([K|Kx], F, M, Path) -> 
+    maps:update(K, update_with(Kx, F, maps:get(K, M), Path), M);
+update_with(    [], F, V, Path) -> 
+    F(Path, V).
+
+update_with_test() ->
+    % Tests conditions when path matches a value in map
+    Fun = fun(_,_) -> 0 end,
+    ?assertEqual(      0 , update_with(  [], Fun,    #{a=>1})),
+    ?assertEqual(#{ a=>0}, update_with( [a], Fun,    #{a=>1})),
+    ?assertMatch(#{m0:=0}, update_with([m0], Fun, test_map())),
+    ?assertMatch(#{m0:=#{m1:=0}}, update_with([m0, m1], Fun, test_map())),
+    % Tests conditions when path does not match a value in map 
+    ?assertException(error, {badkey,'?'}, 
+                     update_with([    '?'], Fun, test_map())),
+    ?assertException(error, {badkey,'?'}, 
+                     update_with([m0, '?'], Fun, test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, update_with([], Fun, x)).
 
 
 
 
 
-update(Path, ValueOrFun, Map) ->
-    try updatef_internal(Path, ValueOrFun, Map)
-    catch
-        error:{error, {no_map, PathRest, Element}} ->
-            PathLength  = length(Path) - length(PathRest),
-            PathToThrow = lists:sublist(Path, PathLength),
-            erlang:error({no_map, PathToThrow, Element})
-    end.
 
-updatef_internal([Key|PathRest], ValueOrFun, Map) when is_map(Map) ->
-    maps:update(Key, updatef_internal(PathRest, ValueOrFun, maps:get(Key, Map)), Map);
-updatef_internal([], Fun, OldValue) when is_function(Fun) ->
-    Fun(OldValue);
-updatef_internal([], Value, _) ->
-    Value;
-updatef_internal(Path, _, Element) ->
-    erlang:error({error, {no_map, Path, Element}}).
+
+
 
 
 put([Key|PathRest], Value, Map) ->
@@ -175,24 +223,6 @@ append(Path, Value, Map) ->
 % --------------------------------------------------------------------
 % ACTUAL TESTS -------------------------------------------------------
 
-
-
-update_test() ->
-    ?assertEqual(3, update([], 3, test_map())),
-    ?assertEqual(#{three => 3, three_side => 3}, update([three], 3, test_map())),
-    ?assertEqual(
-       #{three => #{two => 2, two_side => 2}, three_side => 3},
-       update([three, two], 2, test_map())
-    ),
-    ?assertEqual(
-       #{three => #{two => #{one => target, one_side => 11}, two_side => 2}, three_side => 3},
-       update([three, two, one_side], fun(E) -> E + 10 end, test_map())
-    ).
-
-update_fails_test() ->
-    ?assertException(error, {badkey, unknown}, update([unknown], 1, test_map())),
-    ?assertException(error, {badkey, unknown}, update([three, unknown], 1, test_map())),
-    ?assertException(error, {no_map, [foo,bar], []}, update([foo, bar, buz], 1, #{foo => #{bar => []}})).
 
 put_test() ->
     ?assertEqual(3, put([], 3, test_map())),
