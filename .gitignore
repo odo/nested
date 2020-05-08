@@ -4,3 +4,4 @@ deps
 ebin
 src/tags
 tags
+_build
