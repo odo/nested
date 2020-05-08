@@ -213,15 +213,39 @@ remove_test() ->
     % Tests conditions when the map input is not a map
     ?assertException(error, {badmap,x}, remove([], x)).
 
+%%--------------------------------------------------------------------
+%% @doc Returns, in any order, a the list of keys for the map located 
+%% at the specified key path.
+%% The call fails with a {badmap,Map} exception if Map is not a map.
+%% @end
+%%--------------------------------------------------------------------
+-spec keys(path(), map()) -> map().
+keys(Path, Map) when is_map(Map) -> get_keys(Path, Map);
+keys( _, NoMap)                  -> error({badmap, NoMap}).
+
+get_keys([K|Kx], Map) when is_map(Map) -> get_keys(Kx, maps:get(K, Map));
+get_keys(    [], Map) when is_map(Map) -> maps:keys(Map);
+get_keys(  _, _NoMap)                  -> [].
+
+keys_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(     [a], keys(      [],    #{a=>1})),
+    ?assertEqual([m1, v1], keys(    [m0], test_map())),
+    ?assertEqual([m2, v2], keys([m0, m1], test_map())), 
+    ?assertEqual(      [], keys([     a],    #{a=>1})),
+    ?assertEqual(      [], keys([m0, v1], test_map())),
+    % Tests conditions when path does not match a value in map 
+    ?assertException(error, {badkey, a }, keys([     a ],    #{b=>1})),
+    ?assertException(error, {badkey,'?'}, keys([    '?'], test_map())),
+    ?assertException(error, {badkey,'?'}, keys([m0, '?'], test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, keys([], x)).
 
 
 
 
 
-keys([Key|PathRest], Map) ->
-    keys(PathRest, maps:get(Key, Map));
-keys([], Map) ->
-    maps:keys(Map).
+
 
 append(Path, Value, Map) ->
     AppendFun =
@@ -252,18 +276,6 @@ append(Path, Value, Map) ->
 % ACTUAL TESTS -------------------------------------------------------
 
 
-
-
-
-keys_test() ->
-    ?assertEqual(
-       [three, three_side],
-        keys([], test_map())
-    ),
-    ?assertEqual(
-       [one, one_side],
-        keys([three, two], test_map())
-    ).
 
 append_test() ->
     TestMap = #{outer => #{list => [1], hash => #{}}},
