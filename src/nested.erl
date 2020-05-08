@@ -5,11 +5,9 @@
 -module (nested).
 -include_lib("eunit/include/eunit.hrl").
 
--export([is_key/2, get/2, get/3, put/3, update/3, update_with/3,
-    remove/2,
-    keys/2,
-    append/3
-]).
+-export([is_key/2, get/2, get/3, put/3, update/3, update_with/3]).
+-export([remove/2, keys/2]).
+
 -export_type([key/0, path/0]).
 
 -type key()  :: term().
@@ -242,21 +240,6 @@ keys_test() ->
     ?assertException(error, {badmap,x}, keys([], x)).
 
 
-
-
-
-
-
-append(Path, Value, Map) ->
-    AppendFun =
-        fun(List) when is_list(List) ->
-                List ++ [Value];
-           (_) ->
-                error(no_list)
-        end,
-    update(Path, AppendFun, Map).
-
-
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
@@ -274,24 +257,6 @@ append(Path, Value, Map) ->
 
 % --------------------------------------------------------------------
 % ACTUAL TESTS -------------------------------------------------------
-
-
-
-append_test() ->
-    TestMap = #{outer => #{list => [1], hash => #{}}},
-    ?assertEqual(
-         #{outer => #{list => [1, 2], hash => #{}}},
-        append([outer, list], 2, TestMap)
-    ).
-
-append_fail_test() ->
-    TestMap = #{outer => #{list => [1], hash => #{}}},
-    ?assertException(
-        error, no_list,
-        append([outer, hash], 2, TestMap)
-    ).
-
-
 
 % --------------------------------------------------------------------
 % SPECIFIC HELPER FUNCTIONS ------------------------------------------
