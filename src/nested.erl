@@ -189,23 +189,34 @@ update_with_test() ->
     % Tests conditions when the map input is not a map
     ?assertException(error, {badmap,x}, update_with([], Fun, x)).
 
+%%--------------------------------------------------------------------
+%% @doc Removes the Key, if it exists, and its associated value from 
+%% Map1 and returns a new map Map2 without the key and value.
+%% The call fails with a {badmap,Map} exception if Map1 is not a map.
+%% @end
+%%--------------------------------------------------------------------
+-spec remove(path(), map()) -> map().
+remove(   [K], Map) when is_map(Map) -> maps:remove(K, Map);
+remove([K|Kx], Map) when is_map(Map) -> Map#{K:=remove(Kx, maps:get(K, Map))};
+remove(    [], Map) when is_map(Map) -> #{};
+remove(   _, NoMap)                  -> error({badmap, NoMap}).
+
+remove_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(       #{}, remove(       [],    #{a=>1})),
+    ?assertEqual(       #{}, remove(      [a],    #{a=>1})),
+    ?assertNotMatch(#{m0:=_        }, remove(     [m0], test_map())),
+    ?assertNotMatch(#{m0:=#{ m1:=_}}, remove([m0,  m1], test_map())), 
+    % Tests conditions when path does not match a value in map 
+    ?assertEqual(test_map(), remove([    '?'], test_map())),
+    ?assertEqual(test_map(), remove([m0, '?'], test_map())),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, remove([], x)).
 
 
 
 
 
-
-remove([], _) ->
-    throw({bad_path, []});
-remove([LastKey], Map) ->
-    maps:remove(LastKey, Map);
-remove([Key|PathRest], Map) ->
-    case maps:is_key(Key, Map) of
-        true ->
-            maps:put(Key, remove(PathRest, maps:get(Key, Map)), Map);
-        false ->
-            Map
-    end.
 
 keys([Key|PathRest], Map) ->
     keys(PathRest, maps:get(Key, Map));
@@ -243,26 +254,6 @@ append(Path, Value, Map) ->
 
 
 
-remove_test() ->
-    ?assertEqual(
-        #{three => #{two_side => 2}, three_side => 3},
-        remove([three, two], test_map())
-    ),
-    ?assertEqual(
-        #{three => #{two => #{one_side => 1}, two_side => 2}, three_side => 3},
-        remove([three, two, one], test_map())
-    ),
-    ?assertEqual(
-       test_map(),
-        remove([unknown, path], test_map())
-    ),
-    ?assertEqual(
-       test_map(),
-        remove([three, unknown_key], test_map())
-    ).
-
-remove_fail_test() ->
-    ?assertException(throw, {bad_path, []}, remove([], test_map())).
 
 keys_test() ->
     ?assertEqual(
