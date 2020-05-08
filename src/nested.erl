@@ -1,7 +1,11 @@
+%%%-------------------------------------------------------------------
+%%% @doc
+%%% @end
+%%%-------------------------------------------------------------------
 -module (nested).
+-include_lib("eunit/include/eunit.hrl").
 
--export([
-    is_key/2,
+-export([is_key/2,
     put/3,
     get/2,
     get/3,
@@ -11,6 +15,16 @@
     append/3
 ]).
 
+
+%%%===================================================================
+%%% API
+%%%===================================================================
+
+%%--------------------------------------------------------------------
+%% @doc Returns true if the keys path exists, otherwise false.
+%% @end
+%%--------------------------------------------------------------------
+-spec is_key([Keys :: atom()], map()) -> boolean().
 is_key([Key], Map) ->
     maps:is_key(Key, Map);
 
@@ -19,6 +33,13 @@ is_key([Key|PathRest], Map) ->
         #{Key := SubMap} -> is_key(PathRest, SubMap);
         _                -> false
     end.
+
+is_key_test() ->
+    ?assertEqual(false, is_key([fnord, foo, bar], #{})),
+    ?assertEqual(true,  is_key([fnord], #{fnord => 23})),
+    ?assertEqual(true,  is_key([three, two, one], test_map())),
+    ?assertEqual(false, is_key([three, two, seven], test_map())).
+
 
 
 get([Key|PathRest], Map) ->
@@ -93,15 +114,24 @@ append(Path, Value, Map) ->
         end,
     update(Path, AppendFun, Map).
 
--ifdef(TEST).
--include_lib("eunit/include/eunit.hrl").
+
+%%%===================================================================
+%%% Internal functions
+%%%===================================================================
 
 
-is_key_test() ->
-    ?assertEqual(false, is_key([fnord, foo, bar], #{})),
-    ?assertEqual(true,  is_key([fnord], #{fnord => 23})),
-    ?assertEqual(true,  is_key([three, two, one], test_map())),
-    ?assertEqual(false, is_key([three, two, seven], test_map())).
+%%====================================================================
+%% Eunit white box tests
+%%====================================================================
+
+% --------------------------------------------------------------------
+% TESTS DESCRIPTIONS -------------------------------------------------
+
+% --------------------------------------------------------------------
+% SPECIFIC SETUP FUNCTIONS -------------------------------------------
+
+% --------------------------------------------------------------------
+% ACTUAL TESTS -------------------------------------------------------
 
 get_test() ->
     ?assertEqual(test_map(), get([], test_map())),
@@ -206,10 +236,14 @@ append_fail_test() ->
         append([outer, hash], 2, TestMap)
     ).
 
+
+
+% --------------------------------------------------------------------
+% SPECIFIC HELPER FUNCTIONS ------------------------------------------
+
+% Creates a simple nested map for testing ---------------------------
 test_map() ->
     L1 = #{one   => target, one_side => 1},
     L2 = #{two   => L1,     two_side => 2},
          #{three => L2,     three_side => 3}.
-
--endif.
 
