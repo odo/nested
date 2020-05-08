@@ -5,9 +5,7 @@
 -module (nested).
 -include_lib("eunit/include/eunit.hrl").
 
--export([is_key/2, get/2, get/3,
-    put/3,
-    update/3, update_with/3,
+-export([is_key/2, get/2, get/3, put/3, update/3, update_with/3,
     remove/2,
     keys/2,
     append/3
@@ -97,6 +95,38 @@ get_with_default_test() ->
     ?assertException(error, {badmap,x}, get([], x)).
 
 %%--------------------------------------------------------------------
+%% @doc Associates key path with value Value and inserts the 
+%% association into Map2. If key key path already exists in map Map1, 
+%% the old associated value is replaced by value Value. The function 
+%% returns a new map containing the new association and the old path
+%% associations in Map1.
+%% The call fails with a {badmap,Map} exception if Map1 is not a map.
+%% @end
+%%--------------------------------------------------------------------
+-spec put(path(), term(), map()) -> map().
+put(   [K], Val, Map) when is_map(Map) -> Map#{K => Val};
+put([K|Kx], Val, Map) when is_map(Map) -> 
+    case Map of
+        #{K := SubMap} -> maps:put(K, put(Kx, Val, SubMap), Map);
+        _              -> maps:put(K, put(Kx, Val,    #{}), Map)
+    end;
+put(    [], Val, Map) when is_map(Map) -> Val;
+put(     _, _, NoMap)                  -> error({badmap, NoMap}).
+
+put_test() ->
+    % Tests conditions when path matches a value in map
+    ?assertEqual(              0 , put(       [], 0,    #{a=>1})),
+    ?assertEqual(#{ a=>2        }, put(      [a], 2,    #{a=>1})),
+    ?assertMatch(#{m0:=0        }, put(     [m0], 0, test_map())),
+    ?assertMatch(#{m0:=#{ m1:=0}}, put([m0,  m1], 0, test_map())),
+    ?assertMatch(#{m0:=#{'?':=0}}, put([m0, '?'], 0, test_map())),
+    % Tests conditions when path does not match a value in map 
+    ?assertMatch(#{ a:=1,  b:=3 }, put(      [b], 3,    #{a=>1})),
+    ?assertMatch(#{m0:=#{ m1:=0}}, put([m0,  m1], 0,        #{})),
+    % Tests conditions when the map input is not a map
+    ?assertException(error, {badmap,x}, put([], 0, x)).
+
+%%--------------------------------------------------------------------
 %% @doc If the key path exists in Map1, the old associated value is 
 %% replaced by value Value. The function returns a new map Map2 
 %% containing the new associated value.
@@ -165,19 +195,6 @@ update_with_test() ->
 
 
 
-
-
-
-put([Key|PathRest], Value, Map) ->
-    SubMap =
-    case maps:is_key(Key, Map) andalso is_map(maps:get(Key, Map)) of
-       true ->  maps:get(Key, Map);
-       false -> #{}
-    end,
-    maps:put(Key, put(PathRest, Value, SubMap), Map);
-put([], Value, _) ->
-    Value.
-
 remove([], _) ->
     throw({bad_path, []});
 remove([LastKey], Map) ->
@@ -224,22 +241,7 @@ append(Path, Value, Map) ->
 % ACTUAL TESTS -------------------------------------------------------
 
 
-put_test() ->
-    ?assertEqual(3, put([], 3, test_map())),
-    ?assertEqual(#{three => 3, three_side => 3}, put([three], 3, test_map())),
-    ?assertEqual(#{three => #{two => 2, two_side => 2}, three_side => 3}, put([three, two], 2, test_map())),
-    ?assertEqual(
-        #{unknown => 1, three => #{two => #{one => target, one_side => 1}, two_side => 2}, three_side => 3},
-        put([unknown], 1, test_map())
-    ),
-    ?assertEqual(
-        #{three => #{two => #{one => target, one_side => 1, eleven => #{twelve => 12}}, two_side => 2}, three_side => 3},
-        put([three, two, eleven, twelve], 12, test_map())
-    ),
-    ?assertEqual(
-        #{three => #{two => #{one => #{minus_one => -1}, one_side => 1}, two_side => 2}, three_side => 3},
-        put([three, two, one, minus_one], -1, test_map())
-    ).
+
 
 remove_test() ->
     ?assertEqual(
